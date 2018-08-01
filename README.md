@@ -14,6 +14,9 @@ const doSomeThingWithTheUrl = (url) => {
 <ImageUpload onSubmit={doSomeThingWithTheUrl} />
 ```
 
+Alternatively, use the `MarkdownImageUpload` to get a Markdown formatted image string instead of the url through the `onSubmit` callback.
+
+
 ## Meteor settings
 
 Your meteor settings should contain the following:

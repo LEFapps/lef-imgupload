@@ -7,6 +7,7 @@ Package.describe({
 Package.onUse(function(api) {
   api.use(["ecmascript", "edgee:slingshot"]);
   Npm.depends({
+    lodash: "4.17.5",
     react: "16.3.0",
     reactstrap: "5.0.0"
   });

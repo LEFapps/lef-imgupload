@@ -11,6 +11,7 @@ import {
 import PropTypes from "prop-types";
 import { Slingshot } from "meteor/edgee:slingshot";
 import { Meteor } from "meteor/meteor";
+import { last } from "lodash";
 
 import "./Settings";
 
@@ -91,9 +92,26 @@ class ImageUpload extends Component {
     );
   }
 }
+/*
+ * Converts the uploaded url to a Markdown formatted string.
+ */
+class MarkdownImageUpload extends Component {
+   constructor(props) {
+      super(props);
+      this.convertToMd = this.convertToMd.bind(this);
+   }
+   convertToMd(url) {
+      filename = last( url.split('/') );
+      this.props.onSubmit(`\n![${filename}](${url})`);
+   }
+   render() {
+      return <ImageUpload onSubmit={this.convertToMd} />
+   }
+}
 
 ImageUpload.propTypes = {
   onSubmit: PropTypes.func.isRequired
 };
 
 export default ImageUpload;
+export { MarkdownImageUpload };
