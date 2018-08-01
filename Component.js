@@ -21,6 +21,7 @@ const initState = {
   localImage: null,
   image: null,
   progress: null,
+  started: false,
   uploaded: false,
   error: undefined
 };
@@ -31,14 +32,15 @@ class ImageUpload extends Component {
     this.state = initState;
     this.onChange = this.onChange.bind(this);
     this.handleUpload = this.handleUpload.bind(this);
-    this.updateProgress();
   }
   updateProgress() {
     setInterval(() => {
-      this.setState({
-        progress: Math.round(uploader.progress() * 100),
-        uploaded: uploader.progress() == 1 ? true : false
-      });
+      if (this.state.started) {
+        this.setState({
+          progress: Math.round(uploader.progress() * 100),
+          uploaded: uploader.progress() == 1 ? true : false
+        });
+      }
     }, 200);
   }
   onChange(e) {
@@ -49,6 +51,7 @@ class ImageUpload extends Component {
     }
   }
   handleUpload(e) {
+    this.state.started = true;
     uploader.send(this.state.image, (error, url) => {
       if (error) {
         this.setState({ error: error.message });
@@ -96,17 +99,17 @@ class ImageUpload extends Component {
  * Converts the uploaded url to a Markdown formatted string.
  */
 class MarkdownImageUpload extends Component {
-   constructor(props) {
-      super(props);
-      this.convertToMd = this.convertToMd.bind(this);
-   }
-   convertToMd(url) {
-      filename = last( url.split('/') );
-      this.props.onSubmit(`\n![${filename}](${url})`);
-   }
-   render() {
-      return <ImageUpload onSubmit={this.convertToMd} />
-   }
+  constructor(props) {
+    super(props);
+    this.convertToMd = this.convertToMd.bind(this);
+  }
+  convertToMd(url) {
+    filename = last( url.split('/') );
+    this.props.onSubmit(`\n![${filename}](${url})`);
+  }
+  render() {
+    return <ImageUpload onSubmit={this.convertToMd} />
+  }
 }
 
 ImageUpload.propTypes = {
