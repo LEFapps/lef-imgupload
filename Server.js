@@ -16,6 +16,10 @@ Slingshot.createDirective("imageUpload", Slingshot.S3Storage, {
     return true;
   },
   key: file => {
-    return Random.hexString(3) + "_" + file.name.replace(/\s/g, "-");
-  }
+    const name = file.name || file.type.split("/")[0] || "";
+    const extension = file.name
+      ? name.split(".").pop()
+      : file.type.split("/").pop();
+    return Random.hexString(12) + "." + extension;
+  },
 });
