@@ -70,7 +70,7 @@ class ImageUpload extends Component {
         image: e.target.files[0],
         name: e.target.files[0].name,
       });
-      if (this.props.sizes)
+      if (this.props.sizes && this.props.sizes.length)
         this.props.sizes.forEach(size =>
           this.addThumb(e.target.files[0], size),
         );
