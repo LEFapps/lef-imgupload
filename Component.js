@@ -62,7 +62,6 @@ class ImageUpload extends Component {
     }, 16);
   }
   onChange(e) {
-    // this.setState({ error: undefined });
     this.setState(cloneDeep(initState));
     if (e.target.files[0]) {
       const url = URL.createObjectURL(e.target.files[0]);
@@ -144,7 +143,7 @@ class ImageUpload extends Component {
   }
   render() {
     return (
-      <div>
+      <div id={"imgUpload"}>
         <FormGroup>
           <Label for="imageUploadFile">
             {this.props.label || "Afbeelding selecteren"}
@@ -155,26 +154,26 @@ class ImageUpload extends Component {
             name="file"
             onChange={this.onChange}
           />
-          <FormText color="muted">
+          <FormText color="muted" className={"localImage"}>
             <figure>
               {this.state.localImage ? (
                 <img src={this.state.localImage} className={"img-fluid"} />
               ) : null}
               <figcaption>{this.state.name}</figcaption>
             </figure>
+            {this.state.progress ? (
+              <div id={"progressContainer"}>
+                <div className="text-center">
+                  {Math.round(this.state.progress)} %
+                </div>
+                <Progress
+                  value={this.state.progress}
+                  color={this.state.done ? "success" : "primary"}
+                />
+              </div>
+            ) : null}
           </FormText>
         </FormGroup>
-        {this.state.progress ? (
-          <div>
-            <div className="text-center">
-              {Math.round(this.state.progress)} %
-            </div>
-            <Progress
-              value={this.state.progress}
-              color={this.state.done ? "success" : "primary"}
-            />
-          </div>
-        ) : null}
         {this.state.error ? (
           <Alert color="danger">{this.state.error}</Alert>
         ) : null}
