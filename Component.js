@@ -11,25 +11,26 @@ import {
 import PropTypes from "prop-types";
 import { Slingshot } from "meteor/edgee:slingshot";
 import { Meteor } from "meteor/meteor";
-import { last } from "lodash";
+import { last, cloneDeep } from "lodash";
 
 import ImageTools from "./imageTools";
 import "./Settings";
 
-const uploader = new Slingshot.Upload("imageUpload");
-
 const initState = {
   localImage: null,
-  image: null,
-  thumbnails: [],
   thumbsProcessed: false,
-  progress: null,
-  started: false,
+  image: null,
+  name: "",
   uploaded: false,
+  thumbnails: [],
+  thumbsUploaded: [],
+  started: false,
+  progress: null,
+  done: null,
   error: undefined,
 };
 
-generateThumbnail = (image, size, callback) => {
+const generateThumbnail = (image, size, callback) => {
   ImageTools.resize(
     image,
     {
@@ -40,57 +41,42 @@ generateThumbnail = (image, size, callback) => {
   );
 };
 
+const uploader = new Slingshot.Upload("imageUpload");
+
 class ImageUpload extends Component {
   constructor(props) {
     super(props);
-    this.state = initState;
+    this.state = cloneDeep(initState);
     this.onChange = this.onChange.bind(this);
     this.handleUpload = this.handleUpload.bind(this);
+    this.uploader = uploader;
   }
   updateProgress() {
     setInterval(() => {
       if (this.state.started) {
         this.setState({
-          progress: Math.round(uploader.progress() * 100),
-          uploaded: uploader.progress() == 1 ? true : false,
+          progress: this.uploader.progress() * 100,
+          done: this.uploader.progress() >= 1 ? true : false,
         });
       }
-    }, 200);
+    }, 16);
   }
   onChange(e) {
-    this.setState({ error: undefined });
+    // this.setState({ error: undefined });
+    this.setState(cloneDeep(initState));
     if (e.target.files[0]) {
       const url = URL.createObjectURL(e.target.files[0]);
-      this.setState({ localImage: url, image: e.target.files[0] });
+      this.setState({
+        localImage: url,
+        image: e.target.files[0],
+        name: e.target.files[0].name,
+      });
       if (this.props.sizes)
         this.props.sizes.forEach(size =>
           this.addThumb(e.target.files[0], size),
         );
       else this.setState({ thumbsProcessed: true });
     }
-  }
-  handleUpload(e) {
-    this.state.started = true;
-    this.state.thumbnails.forEach(
-      (thumbnail, sizeIndex) =>
-        thumbnail
-          ? uploader.send(thumbnail, (error, url) => {
-              console.log(thumbnail, this.props.sizes[sizeIndex]);
-              if (error)
-                console.error("Thumbnail could not be uploaded", error);
-              else this.props.onSubmit(url, this.props.sizes[sizeIndex]);
-            })
-          : false,
-    );
-    uploader.send(this.state.image, (error, url) => {
-      if (error) {
-        this.setState({ error: error.message });
-        console.error(error);
-      } else {
-        this.setState(initState);
-        this.props.onSubmit(url);
-      }
-    });
   }
   addThumb(image, size) {
     generateThumbnail(image, size, (file, success, failure) => {
@@ -103,23 +89,89 @@ class ImageUpload extends Component {
       });
     });
   }
+  handleUpload(e) {
+    this.state.started = true;
+    this.updateProgress();
+
+    this.uploader.send(this.state.image, (error, url) => {
+      if (error) {
+        this.setState({ error: error.message });
+        console.error(error);
+      } else this.setState({ uploaded: url });
+
+      this.uploadThumb(0);
+    });
+  }
+  uploadThumb(index) {
+    const image = this.state.thumbnails[index];
+    const size = this.props.sizes[index];
+    if (typeof image === "undefined") this.finishUpload();
+    else {
+      if (image) {
+        this.uploader.send(image, (error, url) => {
+          if (error)
+            console.error(`Thumbnail ${size} could not be uploaded`, error);
+          const thumb = {
+            size: size,
+            url: url,
+          };
+          this.setState(prevState => {
+            thumbsUploaded: prevState.thumbsUploaded.push(thumb);
+          });
+          this.uploadThumb(++index);
+        });
+      } else {
+        const thumb = {
+          size: size,
+          url: this.state.uploaded,
+        };
+        this.setState(prevState => {
+          thumbsUploaded: prevState.thumbsUploaded.push(thumb);
+        });
+        this.uploadThumb(++index);
+      }
+    }
+  }
+  finishUpload() {
+    if (!this.state.error) {
+      const url = this.state.uploaded;
+      const thumbnails = this.state.thumbsUploaded;
+      if (url && thumbnails.length == this.props.sizes.length) {
+        this.setState(cloneDeep(initState));
+        this.props.onSubmit(url, thumbnails);
+      }
+    }
+  }
   render() {
     return (
       <div>
-        {this.state.localImage ? (
-          <img src={this.state.localImage} className="img-fluid" width="50px" />
-        ) : null}
         <FormGroup>
-          <Label for="exampleFile">Image upload</Label>
-          <Input type="file" name="file" onChange={this.onChange} />
-          <FormText color="muted">{this.state.name}</FormText>
+          <Label for="imageUploadFile">
+            {this.props.label || "Afbeelding selecteren"}
+          </Label>
+          <Input
+            id={"imageUploadFile"}
+            type="file"
+            name="file"
+            onChange={this.onChange}
+          />
+          <FormText color="muted">
+            <figure>
+              {this.state.localImage ? (
+                <img src={this.state.localImage} className={"img-fluid"} />
+              ) : null}
+              <figcaption>{this.state.name}</figcaption>
+            </figure>
+          </FormText>
         </FormGroup>
         {this.state.progress ? (
           <div>
-            <div className="text-center">{this.state.progress}%</div>
+            <div className="text-center">
+              {Math.round(this.state.progress)} %
+            </div>
             <Progress
               value={this.state.progress}
-              color={this.state.uploaded ? "success" : "primary"}
+              color={this.state.done ? "success" : "primary"}
             />
           </div>
         ) : null}
@@ -133,7 +185,7 @@ class ImageUpload extends Component {
           }
         >
           {this.state.localImage && !this.state.thumbsProcessed
-            ? "Processing…"
+            ? "Verwerken…"
             : this.props.submitText || "Upload"}
         </Button>
       </div>
@@ -160,6 +212,7 @@ class MarkdownImageUpload extends Component {
 ImageUpload.propTypes = {
   onSubmit: PropTypes.func.isRequired,
   sizes: PropTypes.array,
+  label: PropTypes.string,
 };
 
 export default ImageUpload;

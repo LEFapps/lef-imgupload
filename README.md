@@ -7,8 +7,9 @@ This package let's you upload images to Amazon AWS S3 using a simple user interf
 ```JSX
 import ImageUpload from "meteor/lef:imgupload";
 
-const doSomeThingWithTheUrl = (url[, size]) => {
-  console.log(size, url);
+const doSomeThingWithTheUrl = (url[, thumbs]) => {
+  console.log(url, thumbs);
+  // thumbs is an array of objects: {size: 256, url: "URL"}
 }
 
 <ImageUpload onSubmit={doSomeThingWithTheUrl} sizes={[256,512]} />
@@ -35,24 +36,52 @@ Your meteor settings should contain the following:
 }
 ```
 
+> **maxSize** in bytes: 12 _ 1024 _ 1024 ~ 12582912 ~ 12 MB
+
 ## Client side image resizing
 
-You can specify an array of sizes for which a thumbnail should be created. These are uploaded together with the original file. You should take care saving the thumbnail urls in the onSubmit handler.
-
-The onSubmit handler is called for each thumbnail with the size as a second parameter. Proposal for saving thumbnails:
+You can specify an array of sizes for which a thumbnail should be created. These are uploaded together with the original file. The onSubmit handler is called once when all images are uploaded. Proposal for saving thumbnails:
 
 ```JSON
 {
   "url" : "<original image url>",
   "thumbnails" : {
-    "size" : "<thumbnail url>"
+    "<size>" : "<thumbnail url>"
   }
+}
+```
+
+```JSX
+const ImageBox = picture => {
+  const url =
+    picture.thumbnails && picture.thumbnails["512"]
+      ? picture.thumbnails["512"]
+      : picture.url;
+  return <div style={{backgroundImage: `url(${url})`}} />;
+}
+```
+
+or just use the original thumbnails parameter:
+
+```JSON
+{
+  "url" : "<original image url>",
+  "thumbnails" : [
+    {
+      "size" : "<size>",
+      "url" : "<thumbnail url>"
+    },
+    {
+      "size" : "<size>",
+      "url" : "<thumbnail url>"
+    }
+  ]
 }
 ```
 
 ## Dependencies
 
-The upload is transfered directly from the client to the AWS. This doesn't charge our server unnecessarely. Using: https://github.com/CulturalMe/meteor-slingshot/#aws-s3-slingshots3storage
+The upload is transferred directly from the client to the AWS. This doesn't charge our server unnecessarely. Using: https://github.com/CulturalMe/meteor-slingshot/#aws-s3-slingshots3storage
 
 ## Installation
 
