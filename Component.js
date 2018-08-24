@@ -6,7 +6,7 @@ import {
   Input,
   FormText,
   Progress,
-  Alert,
+  Alert
 } from "reactstrap";
 import PropTypes from "prop-types";
 import { Slingshot } from "meteor/edgee:slingshot";
@@ -27,7 +27,7 @@ const initState = {
   started: false,
   progress: null,
   done: null,
-  error: undefined,
+  error: undefined
 };
 
 const generateThumbnail = (image, size, callback) => {
@@ -35,9 +35,9 @@ const generateThumbnail = (image, size, callback) => {
     image,
     {
       width: size, // maximum width
-      height: size, // maximum height
+      height: size // maximum height
     },
-    callback,
+    callback
   );
 };
 
@@ -56,7 +56,7 @@ class ImageUpload extends Component {
       if (this.state.started) {
         this.setState({
           progress: this.uploader.progress() * 100,
-          done: this.uploader.progress() >= 1 ? true : false,
+          done: this.uploader.progress() >= 1 ? true : false
         });
       }
     }, 16);
@@ -68,11 +68,11 @@ class ImageUpload extends Component {
       this.setState({
         localImage: url,
         image: e.target.files[0],
-        name: e.target.files[0].name,
+        name: e.target.files[0].name
       });
       if (this.props.sizes && this.props.sizes.length)
         this.props.sizes.forEach(size =>
-          this.addThumb(e.target.files[0], size),
+          this.addThumb(e.target.files[0], size)
         );
       else this.setState({ thumbsProcessed: true });
     }
@@ -112,7 +112,7 @@ class ImageUpload extends Component {
             console.error(`Thumbnail ${size} could not be uploaded`, error);
           const thumb = {
             size: size,
-            url: url,
+            url: url
           };
           this.setState(prevState => {
             thumbsUploaded: prevState.thumbsUploaded.push(thumb);
@@ -122,7 +122,7 @@ class ImageUpload extends Component {
       } else {
         const thumb = {
           size: size,
-          url: this.state.uploaded,
+          url: this.state.uploaded
         };
         this.setState(prevState => {
           thumbsUploaded: prevState.thumbsUploaded.push(thumb);
@@ -211,7 +211,7 @@ class MarkdownImageUpload extends Component {
 ImageUpload.propTypes = {
   onSubmit: PropTypes.func.isRequired,
   sizes: PropTypes.array,
-  label: PropTypes.string,
+  label: PropTypes.oneOfType([PropTypes.string, PropTypes.object])
 };
 
 export default ImageUpload;
