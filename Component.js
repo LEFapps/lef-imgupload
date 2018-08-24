@@ -11,10 +11,11 @@ import {
 import PropTypes from "prop-types";
 import { Slingshot } from "meteor/edgee:slingshot";
 import { Meteor } from "meteor/meteor";
-import { last, cloneDeep } from "lodash";
+import { last, cloneDeep, omit } from "lodash";
 
 import ImageTools from "./imageTools";
-import "./Settings";
+// import "./Settings";
+import createSlingShot from "./Settings";
 
 const initState = {
   localImage: null,
@@ -28,6 +29,7 @@ const initState = {
   progress: null,
   done: null,
   error: undefined,
+  uploader: false,
 };
 
 const generateThumbnail = (image, size, callback) => {
@@ -41,28 +43,36 @@ const generateThumbnail = (image, size, callback) => {
   );
 };
 
-const uploader = new Slingshot.Upload("imageUpload");
+// const uploader = new Slingshot.Upload("imageUpload");
 
 class ImageUpload extends Component {
   constructor(props) {
     super(props);
     this.state = cloneDeep(initState);
+    Meteor.call("createSlingShot", props.options, (e, r) => {
+      if (r) {
+        createSlingShot("imgUpload", props.options);
+        this.setState({ uploader: new Slingshot.Upload("imgUpload") });
+      } else
+        console.error(
+          "Uploader could not be initiated. See server log for more details.",
+        );
+    });
     this.onChange = this.onChange.bind(this);
     this.handleUpload = this.handleUpload.bind(this);
-    this.uploader = uploader;
   }
   updateProgress() {
     setInterval(() => {
       if (this.state.started) {
         this.setState({
-          progress: this.uploader.progress() * 100,
-          done: this.uploader.progress() >= 1 ? true : false,
+          progress: this.state.uploader.progress() * 100,
+          done: this.state.uploader.progress() >= 1 ? true : false,
         });
       }
     }, 16);
   }
   onChange(e) {
-    this.setState(cloneDeep(initState));
+    this.setState(omit(initState, "uploader"));
     if (e.target.files[0]) {
       const url = URL.createObjectURL(e.target.files[0]);
       this.setState({
@@ -92,7 +102,7 @@ class ImageUpload extends Component {
     this.state.started = true;
     this.updateProgress();
 
-    this.uploader.send(this.state.image, (error, url) => {
+    this.state.uploader.send(this.state.image, (error, url) => {
       if (error) {
         this.setState({ error: error.message });
         console.error(error);
@@ -107,7 +117,7 @@ class ImageUpload extends Component {
     if (typeof image === "undefined") this.finishUpload();
     else {
       if (image) {
-        this.uploader.send(image, (error, url) => {
+        this.state.uploader.send(image, (error, url) => {
           if (error)
             console.error(`Thumbnail ${size} could not be uploaded`, error);
           const thumb = {
@@ -142,7 +152,9 @@ class ImageUpload extends Component {
     }
   }
   render() {
-    return (
+    return !this.state.uploader ? (
+      "Opstarten…"
+    ) : (
       <div id={"imgUpload"}>
         <FormGroup>
           <Label for="imageUploadFile">
@@ -211,7 +223,7 @@ class MarkdownImageUpload extends Component {
 ImageUpload.propTypes = {
   onSubmit: PropTypes.func.isRequired,
   sizes: PropTypes.array,
-  label: PropTypes.string,
+  label: PropTypes.oneOfType([PropTypes.string, PropTypes.element]),
 };
 
 export default ImageUpload;

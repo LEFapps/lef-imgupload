@@ -12,7 +12,15 @@ const doSomeThingWithTheUrl = (url[, thumbs]) => {
   // thumbs is an array of objects: {size: 256, url: "URL"}
 }
 
-<ImageUpload onSubmit={doSomeThingWithTheUrl} sizes={[256,512]} label={'Upload je profielfoto'} />
+<ImageUpload
+  onSubmit={doSomeThingWithTheUrl}
+  sizes={[256,512]}
+  label={'Upload je profielfoto'}
+  options={{
+      maxSize: 2 * 1024 * 1024,
+      allowedFileTypes: ["image/jpeg", "image/png"],
+    }}
+/>
 ```
 
 Alternatively, use the `MarkdownImageUpload` to get a Markdown formatted image string instead of the url through the `onSubmit` callback.
@@ -27,16 +35,8 @@ Your meteor settings should contain the following:
   "AWSSecretAccessKey": "yoursecret",
   "S3Bucket": "yourbucket",
   "S3Region": "yourregion",
-  "public": {
-    "imgupload": {
-      "allowedFileTypes": ["image/png", "image/jpeg", "image/gif"],
-      "maxSize": 12582912
-    }
-  }
 }
 ```
-
-> **maxSize** in bytes: 12 _ 1024 _ 1024 ~ 12582912 ~ 12 MB
 
 ## Client side image resizing
 
@@ -46,7 +46,8 @@ You can specify an array of sizes for which a thumbnail should be created. These
 {
   "url" : "<original image url>",
   "thumbnails" : {
-    "<size>" : "<thumbnail url>"
+    "<size1>" : "<thumbnail url>",
+    "<size2>" : "<thumbnail url>"
   }
 }
 ```
