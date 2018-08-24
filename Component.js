@@ -214,5 +214,9 @@ ImageUpload.propTypes = {
   label: PropTypes.oneOfType([PropTypes.string, PropTypes.object])
 };
 
+ImageUpload.defaultProps = {
+  sizes: []
+};
+
 export default ImageUpload;
 export { MarkdownImageUpload };
