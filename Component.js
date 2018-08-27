@@ -211,7 +211,7 @@ class MarkdownImageUpload extends Component {
 ImageUpload.propTypes = {
   onSubmit: PropTypes.func.isRequired,
   sizes: PropTypes.array,
-  label: PropTypes.string,
+  label: PropTypes.oneOfType([PropTypes.string, PropTypes.element]),
 };
 
 export default ImageUpload;

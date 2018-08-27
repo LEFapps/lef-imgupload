@@ -20,6 +20,7 @@ Slingshot.createDirective("imageUpload", Slingshot.S3Storage, {
     const extension = file.name
       ? name.split(".").pop()
       : file.type.split("/").pop();
-    return Random.hexString(12) + "." + extension;
+    const prefix = Meteor.settings.public.imgupload.prefix || "";
+    return prefix + Random.hexString(12) + "." + extension;
   },
 });

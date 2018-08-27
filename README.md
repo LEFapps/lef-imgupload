@@ -30,13 +30,14 @@ Your meteor settings should contain the following:
   "public": {
     "imgupload": {
       "allowedFileTypes": ["image/png", "image/jpeg", "image/gif"],
-      "maxSize": 12582912
+      "maxSize": 12582912,
+      "prefix": "optional/prefix/"
     }
   }
 }
 ```
 
-> **maxSize** in bytes: 12 _ 1024 _ 1024 ~ 12582912 ~ 12 MB
+> **maxSize** in bytes: 12 x 1024 x 1024 ~ 12582912 ~ 12 MB
 
 ## Client side image resizing
 
@@ -87,4 +88,8 @@ The upload is transferred directly from the client to the AWS. This doesn't char
 
 Create a symbolic link to this package in your meteor's package folder:
 
-`ln -s ../../packages/lef-imgupload/ lef-imgupload`
+$ `ln -s ../../packages/lef-imgupload/ lef-imgupload`
+
+Or use submodules:
+
+$ `git submodule add <git/url> packages`
