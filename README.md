@@ -12,7 +12,7 @@ const doSomeThingWithTheUrl = (url[, thumbs]) => {
   // thumbs is an array of objects: {size: 256, url: "URL"}
 }
 
-<ImageUpload onSubmit={doSomeThingWithTheUrl} sizes={[256,512]} label={'Upload je profielfoto'} />
+<ImageUpload onSubmit={doSomeThingWithTheUrl} sizes={[256,512]} label={'Upload je profielfoto'} placeholder={'Optional'} />
 ```
 
 Alternatively, use the `MarkdownImageUpload` to get a Markdown formatted image string instead of the url through the `onSubmit` callback.

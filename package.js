@@ -1,6 +1,6 @@
 Package.describe({
   name: 'lef:imgupload',
-  version: '1.1.6',
+  version: '1.2.0',
   summary: 'File image upload to S3'
 })
 
@@ -9,7 +9,7 @@ Package.onUse(function (api) {
   Npm.depends({
     lodash: '4.17.5',
     react: '16.5.0',
-    reactstrap: '5.0.0'
+    reactstrap: '6.4.0'
   })
   api.addFiles('Server.js', 'server')
   api.mainModule('Component.js', 'client')
