@@ -12,7 +12,7 @@ const doSomeThingWithTheUrl = (url[, thumbs]) => {
   // thumbs is an array of objects: {size: 256, url: "URL"}
 }
 
-<ImageUpload onSubmit={doSomeThingWithTheUrl} sizes={[256,512]} label={'Upload je profielfoto'} placeholder={'Optional'} />
+<ImageUpload onSubmit={doSomeThingWithTheUrl} sizes={[256,512]} label={'Upload je profielfoto'} placeholder={'Optional'} fileUploader={'Optional BOOL to use fileUpload instead of imgUpload settings'} />
 ```
 
 Alternatively, use the `MarkdownImageUpload` to get a Markdown formatted image string instead of the url through the `onSubmit` callback.
@@ -30,6 +30,10 @@ Your meteor settings should contain the following:
   "public": {
     "imgupload": {
       "allowedFileTypes": ["image/png", "image/jpeg", "image/gif"],
+      "maxSize": 12582912
+    },
+    "fileupload": {
+      "allowedFileTypes": ["application/pdf", "other filee formats for your file upload"],
       "maxSize": 12582912
     }
   }

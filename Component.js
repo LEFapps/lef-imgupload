@@ -43,6 +43,7 @@ const generateThumbnail = (image, size, callback) => {
 }
 
 const uploader = new Slingshot.Upload('imageUpload')
+const fileUploader = new Slingshot.Upload('fileUpload')
 
 class ImageUpload extends Component {
   constructor (props) {
@@ -50,7 +51,7 @@ class ImageUpload extends Component {
     this.state = cloneDeep(initState)
     this.onChange = this.onChange.bind(this)
     this.handleUpload = this.handleUpload.bind(this)
-    this.uploader = uploader
+    this.uploader = props.fileUploader ? fileUploader : uploader
   }
   updateProgress () {
     setInterval(() => {
@@ -209,7 +210,8 @@ class MarkdownImageUpload extends Component {
 ImageUpload.propTypes = {
   onSubmit: PropTypes.func.isRequired,
   sizes: PropTypes.array,
-  label: PropTypes.oneOfType([PropTypes.string, PropTypes.object])
+  label: PropTypes.oneOfType([PropTypes.string, PropTypes.object]),
+  fileUploader: PropTypes.bool
 }
 
 ImageUpload.defaultProps = {
