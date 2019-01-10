@@ -2,8 +2,6 @@ import React, { Component } from 'react'
 import {
   Button,
   FormGroup,
-  Label,
-  Input,
   CustomInput,
   FormText,
   Progress,
@@ -11,8 +9,7 @@ import {
 } from 'reactstrap'
 import PropTypes from 'prop-types'
 import { Slingshot } from 'meteor/edgee:slingshot'
-import { Meteor } from 'meteor/meteor'
-import { last, cloneDeep, isString } from 'lodash'
+import { last, cloneDeep, sortBy } from 'lodash'
 
 import ImageTools from './imageTools'
 import './Settings'
@@ -73,9 +70,7 @@ class ImageUpload extends Component {
         name: e.target.files[0].name
       })
       if (this.props.sizes && this.props.sizes.length) {
-        this.props.sizes.forEach(size =>
-          this.addThumb(e.target.files[0], size)
-        )
+        this.props.sizes.forEach(size => this.addThumb(e.target.files[0], size))
       } else this.setState({ thumbsProcessed: true })
     }
   }
@@ -140,7 +135,7 @@ class ImageUpload extends Component {
       const thumbnails = this.state.thumbsUploaded
       if (url && thumbnails.length == this.props.sizes.length) {
         this.setState(cloneDeep(initState))
-        this.props.onSubmit(url, thumbnails)
+        this.props.onSubmit(url, sortBy(thumbnails, 'size'))
       }
     }
   }
