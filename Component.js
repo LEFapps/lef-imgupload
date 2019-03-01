@@ -149,6 +149,7 @@ class ImageUpload extends Component {
             name={this.props.name || 'file'}
             label={this.props.placeholder || this.props.label || undefined}
             onChange={this.onChange}
+            invalid={this.props.invalid}
           />
           <FormText color='muted' className={'localImage'}>
             <figure>
