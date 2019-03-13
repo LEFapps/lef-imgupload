@@ -199,7 +199,7 @@ class MarkdownImageUpload extends Component {
     this.props.onSubmit(`\n![${filename}](${url})`)
   }
   render () {
-    return <ImageUpload onSubmit={this.convertToMd} />
+    return <ImageUpload {...this.props} onSubmit={this.convertToMd} />
   }
 }
 
