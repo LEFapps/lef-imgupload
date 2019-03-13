@@ -26,6 +26,7 @@ const timestamp = () => {
 Slingshot.createDirective('imageUpload', Slingshot.S3Storage, {
   bucket: Meteor.settings.S3Bucket,
   acl: 'public-read',
+  cacheControl: 'max-age=3153600',
   region: Meteor.settings.S3Region,
   authorize: () => {
     // Deny uploads if user is not logged in.
@@ -40,15 +41,14 @@ Slingshot.createDirective('imageUpload', Slingshot.S3Storage, {
     const extension = file.name
       ? name.split('.').pop()
       : file.type.split('/').pop()
-    return (
-      'imageUpload/' + timestamp() + '-' + safeName(name) + '.' + extension
-    )
+    return `imageUpload/${timestamp()}-${safeName(name)}.${extension}`
   }
 })
 
 Slingshot.createDirective('fileUpload', Slingshot.S3Storage, {
   bucket: Meteor.settings.S3Bucket,
   acl: 'public-read',
+  cacheControl: 'max-age=3153600',
   region: Meteor.settings.S3Region,
   authorize: () => {
     // Deny uploads if user is not logged in.
@@ -63,6 +63,6 @@ Slingshot.createDirective('fileUpload', Slingshot.S3Storage, {
     const extension = file.name
       ? name.split('.').pop()
       : file.type.split('/').pop()
-    return 'fileUpload/' + timestamp() + '-' + safeName(name) + '.' + extension
+    return `fileUpload/${timestamp()}-${safeName(name)}.${extension}`
   }
 })
