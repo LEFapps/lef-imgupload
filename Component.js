@@ -194,9 +194,17 @@ class MarkdownImageUpload extends Component {
     super(props)
     this.convertToMd = this.convertToMd.bind(this)
   }
-  convertToMd (url) {
+  convertToMd (url, thumbs) {
+    const { sizes } = this.props
     filename = last(url.split('/'))
-    this.props.onSubmit(`\n![${filename}](${url})`)
+    if (sizes && thumbs) {
+      let result = false
+      while (!result && sizes.length) {
+        const size = sizes.pop()
+        result = thumbs.find(t => t.size === size)
+      }
+      if (result) this.props.onSubmit(`\n![${filename}](${result.url})`)
+    } else this.props.onSubmit(`\n![${filename}](${url})`)
   }
   render () {
     return <ImageUpload {...this.props} onSubmit={this.convertToMd} />

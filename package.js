@@ -1,6 +1,6 @@
 Package.describe({
   name: 'lef:imgupload',
-  version: '1.3.6',
+  version: '1.3.7',
   summary: 'File image upload to S3'
 })
 
