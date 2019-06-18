@@ -1,7 +1,27 @@
-import { Meteor } from "meteor/meteor";
-import { Slingshot } from "meteor/edgee:slingshot";
+import { Meteor } from 'meteor/meteor'
+import { Slingshot } from 'meteor/edgee:slingshot'
+import { get } from 'lodash'
 
-Slingshot.fileRestrictions("imageUpload", {
-  allowedFileTypes: Meteor.settings.public.imgupload.allowedFileTypes,
-  maxSize: Meteor.settings.public.imgupload.maxSize, // in bytes, use null for unlimited
-});
+const defaultRestrictions = {
+  allowedFileTypes: get(Meteor.settings.public, 'imgupload.allowedFileTypes', [
+    'image/png',
+    'image/jpeg',
+    'image/gif'
+  ]),
+  maxSize: get(Meteor.settings.public, 'imgupload.maxSize', 12582912)
+}
+
+Slingshot.fileRestrictions('imageUpload', defaultRestrictions)
+
+Slingshot.fileRestrictions('fileUpload', {
+  allowedFileTypes: get(
+    Meteor.settings.public,
+    'fileupload.allowedFileTypes',
+    defaultRestrictions.allowedFileTypes
+  ),
+  maxSize: get(
+    Meteor.settings.public,
+    'fileupload.maxSize',
+    defaultRestrictions.maxSize
+  ) // in bytes, use null for unlimited
+})
