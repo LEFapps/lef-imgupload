@@ -36,7 +36,7 @@ let hasReaderSupport =
   typeof FileReader !== 'undefined' || typeof URL !== 'undefined'
 
 export default class ImageTools {
-  static resize (file, maxDimensions, callback) {
+  static resize (file, maxDimensions, compression = 0.6, callback) {
     if (typeof maxDimensions === 'function') {
       callback = maxDimensions
       maxDimensions = {
@@ -44,6 +44,14 @@ export default class ImageTools {
         height: 1280
       }
     }
+
+    // allowed range: .25 .. 1
+    const comp =
+      compression > 100
+        ? 0.6 // default 60 %
+        : compression > 1
+          ? Math.min(1, compression / 100) // max 100 %
+          : Math.max(0.25, compression) // min 25 %
 
     let maxWidth = maxDimensions.width
     let maxHeight = maxDimensions.height
@@ -120,7 +128,7 @@ export default class ImageTools {
               callback(blob, true)
             },
             file.type,
-            0.5
+            comp
           )
         } else {
           let blob = ImageTools._toBlob(canvas, file.type)

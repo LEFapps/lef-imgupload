@@ -28,13 +28,14 @@ const initState = {
   error: undefined
 }
 
-const generateThumbnail = (image, size, callback) => {
+const generateThumbnail = (image, size, quality, callback) => {
   ImageTools.resize(
     image,
     {
       width: size, // maximum width
       height: size // maximum height
     },
+    quality,
     callback
   )
 }
@@ -75,15 +76,20 @@ class ImageUpload extends Component {
     }
   }
   addThumb (image, size) {
-    generateThumbnail(image, size, (file, success, failure) => {
-      this.setState(prevState => {
-        const key = this.props.sizes.indexOf(size)
-        const thumbnails = prevState.thumbnails
-        thumbnails[key] = success ? file : false
-        const thumbsProcessed = thumbnails.length == this.props.sizes.length
-        return { thumbnails: thumbnails, thumbsProcessed: thumbsProcessed }
-      })
-    })
+    generateThumbnail(
+      image,
+      size,
+      this.props.quality, // 0..1 or %
+      (file, success, failure) => {
+        this.setState(prevState => {
+          const key = this.props.sizes.indexOf(size)
+          const thumbnails = prevState.thumbnails
+          thumbnails[key] = success ? file : false
+          const thumbsProcessed = thumbnails.length == this.props.sizes.length
+          return { thumbnails: thumbnails, thumbsProcessed: thumbsProcessed }
+        })
+      }
+    )
   }
   handleUpload (e) {
     this.state.started = true
