@@ -74,8 +74,6 @@ export default class ImageTools {
 
     image.onload = imgEvt => {
       getOrientation(file, orientation => {
-        const rotated = [6, 8].includes(orientation)
-
         let width = image.width
         let height = image.height
         let isTooLarge = false
@@ -100,7 +98,8 @@ export default class ImageTools {
         }
 
         const canvas = document.createElement('canvas')
-        if (rotated) {
+        if ([5, 6, 7, 8].includes(orientation)) {
+          // 90° rotated
           canvas.width = height
           canvas.height = width
         } else {
@@ -111,13 +110,39 @@ export default class ImageTools {
         let ctx = canvas.getContext('2d')
         ctx.imageSmoothingEnabled = true
         ctx.imageSmoothingQuality = 'high'
-        if (rotated) {
-          ctx.save()
-          ctx.translate(height / 2, width / 2)
-          ctx.rotate((Math.PI / 2) * (orientation === 8 ? -1 : 1))
-          ctx.drawImage(image, -width / 2, -height / 2, width, height)
-          ctx.restore()
-        } else ctx.drawImage(image, 0, 0, width, height)
+        ctx.save()
+        switch (orientation) {
+          case 2:
+            ctx.transform(-1, 0, 0, 1, width, 0)
+            break
+          case 3:
+            ctx.transform(-1, 0, 0, -1, width, height)
+            break
+          case 4:
+            ctx.transform(1, 0, 0, -1, 0, height)
+            break
+          case 5:
+            ctx.transform(-1, 0, 0, 1, 0, 0)
+            ctx.rotate(Math.PI / 2)
+            break
+          case 6:
+            ctx.transform(1, 0, 0, 1, height, 0)
+            ctx.rotate(Math.PI / 2)
+            break
+          case 7:
+            ctx.transform(-1, 0, 0, 1, height, width)
+            ctx.rotate((-1 * Math.PI) / 2)
+            break
+          case 8:
+            ctx.transform(1, 0, 0, 1, 0, width)
+            ctx.rotate((-1 * Math.PI) / 2)
+            break
+          default:
+            ctx.transform(1, 0, 0, 1, 0, 0)
+            break
+        }
+        ctx.drawImage(image, 0, 0, width, height)
+        ctx.restore()
 
         const name = `${Math.round(width)}-${Math.round(height)}-${file.name}`
 
