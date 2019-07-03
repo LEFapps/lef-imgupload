@@ -11,7 +11,7 @@ import PropTypes from 'prop-types'
 import { Slingshot } from 'meteor/edgee:slingshot'
 import { last, cloneDeep, sortBy } from 'lodash'
 
-import ImageTools from './imageTools'
+import ImageTools from './tools/scale'
 import './Settings'
 
 const initState = {
@@ -145,7 +145,7 @@ class ImageUpload extends Component {
         <FormGroup>
           <CustomInput
             type={'file'}
-            id={this.props.key || 'imageUploadFile'}
+            id={this.props.id || 'imageUploadFile'}
             name={this.props.name || 'file'}
             label={this.props.placeholder || this.props.label || undefined}
             onChange={this.onChange}

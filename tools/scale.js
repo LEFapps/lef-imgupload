@@ -1,3 +1,5 @@
+import getOrientation from './orientation'
+
 let hasBlobConstructor =
   typeof Blob !== 'undefined' &&
   (function () {
@@ -38,8 +40,8 @@ export default class ImageTools {
     if (typeof maxDimensions === 'function') {
       callback = maxDimensions
       maxDimensions = {
-        width: 640,
-        height: 480
+        width: 1920,
+        height: 1280
       }
     }
 
@@ -60,57 +62,72 @@ export default class ImageTools {
       return false
     }
 
-    let image = document.createElement('img')
+    const image = document.createElement('img')
 
     image.onload = imgEvt => {
-      let width = image.width
-      let height = image.height
-      let isTooLarge = false
+      getOrientation(file, orientation => {
+        const rotated = [6, 8].includes(orientation)
 
-      if (width >= height && width > maxDimensions.width) {
-        // width is the largest dimension, and it's too big.
-        height *= maxDimensions.width / width
-        width = maxDimensions.width
-        isTooLarge = true
-      } else if (height > maxDimensions.height) {
-        // either width wasn't over-size or height is the largest dimension
-        // and the height is over-size
-        width *= maxDimensions.height / height
-        height = maxDimensions.height
-        isTooLarge = true
-      }
+        let width = image.width
+        let height = image.height
+        let isTooLarge = false
 
-      if (!isTooLarge) {
-        // early exit; no need to resize
-        callback(file, false, 'tooSmall')
-        return
-      }
+        if (width >= height && width > maxWidth) {
+          // width is the largest dimension, and it's too big.
+          height *= maxWidth / width
+          width = maxWidth
+          isTooLarge = true
+        } else if (height > maxHeight) {
+          // either width wasn't over-size or height is the largest dimension
+          // and the height is over-size
+          width *= maxHeight / height
+          height = maxHeight
+          isTooLarge = true
+        }
 
-      let canvas = document.createElement('canvas')
-      canvas.width = width
-      canvas.height = height
+        if (!isTooLarge) {
+          // early exit; no need to resize
+          callback(file, false, 'tooSmall')
+          return
+        }
 
-      let ctx = canvas.getContext('2d')
-      ctx.imageSmoothingEnabled = true
-      ctx.imageSmoothingQuality = 'high'
-      ctx.drawImage(image, 0, 0, width, height)
+        const canvas = document.createElement('canvas')
+        if (rotated) {
+          canvas.width = height
+          canvas.height = width
+        } else {
+          canvas.width = width
+          canvas.height = height
+        }
 
-      const name = `${Math.round(width)}-${Math.round(height)}-${file.name}`
+        let ctx = canvas.getContext('2d')
+        ctx.imageSmoothingEnabled = true
+        ctx.imageSmoothingQuality = 'high'
+        if (rotated) {
+          ctx.save()
+          ctx.translate(height / 2, width / 2)
+          ctx.rotate((Math.PI / 2) * (orientation === 8 ? -1 : 1))
+          ctx.drawImage(image, -width / 2, -height / 2, width, height)
+          ctx.restore()
+        } else ctx.drawImage(image, 0, 0, width, height)
 
-      if (hasToBlobSupport) {
-        canvas.toBlob(
-          blob => {
-            blob.name = name
-            callback(blob, true)
-          },
-          file.type,
-          0.5
-        )
-      } else {
-        let blob = ImageTools._toBlob(canvas, file.type)
-        blob.name = name
-        callback(blob, true)
-      }
+        const name = `${Math.round(width)}-${Math.round(height)}-${file.name}`
+
+        if (hasToBlobSupport) {
+          canvas.toBlob(
+            blob => {
+              blob.name = name
+              callback(blob, true)
+            },
+            file.type,
+            0.5
+          )
+        } else {
+          let blob = ImageTools._toBlob(canvas, file.type)
+          blob.name = name
+          callback(blob, true)
+        }
+      })
     }
     ImageTools._loadImage(image, file)
 
