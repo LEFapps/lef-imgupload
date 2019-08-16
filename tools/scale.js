@@ -36,65 +36,73 @@ let hasReaderSupport =
   typeof FileReader !== 'undefined' || typeof URL !== 'undefined'
 
 export default class ImageTools {
-  static resize (file, maxDimensions, compression = 0.6, callback) {
-    if (typeof maxDimensions === 'function') {
-      callback = maxDimensions
-      maxDimensions = {
-        width: 1920,
-        height: 1280
-      }
+  static resize (
+    file,
+    fileName,
+    { label, quality, crop, ...modifier },
+    callback
+  ) {
+    // Implementation not supported
+    if (!ImageTools.isSupported()) {
+      console.warn('[Image Uploader] Resizing not supported')
+      return callback(file, false, 'unsupported')
     }
 
-    // allowed range: .25 .. 1
-    const comp =
-      compression > 100
-        ? 0.6 // default 60 %
-        : compression > 1
-          ? Math.min(1, compression / 100) // max 100 %
-          : Math.max(0.25, compression) // min 25 %
-
-    let maxWidth = maxDimensions.width
-    let maxHeight = maxDimensions.height
-
-    if (!ImageTools.isSupported() || !file.type.match(/image.*/)) {
-      console.log('!supported || !image')
-      callback(file, false, 'unsupported')
-      return false
+    if (!file.type.match(/image.*/)) {
+      console.warn(`[Image Uploader] Image type ${file.type} not resizable`)
+      return callback(file, false, 'unsupported')
     }
 
+    // Not attempting, could be an animated gif
+    // TODO: use https://github.com/antimatter15/whammy to convert gif to webm
     if (file.type.match(/image\/gif/)) {
-      console.log('gif')
-      // Not attempting, could be an animated gif
-      callback(file, false, 'gif')
-      // TODO: use https://github.com/antimatter15/whammy to convert gif to webm
-      return false
+      console.debug('[Image Uploader] Image type gif not resizable')
+      return callback(file, false, 'gif')
     }
+
+    quality =
+      quality > 100
+        ? 0.6 // default 60 %
+        : quality > 1
+          ? Math.min(1, quality / 100) // max 100 %
+          : Math.max(0.25, quality) // min 25 %
 
     const image = document.createElement('img')
-
     image.onload = imgEvt => {
       getOrientation(file, orientation => {
         let width = image.width
         let height = image.height
-        let isTooLarge = false
+        let drawWidth = modifier.width
+        let drawHeight = modifier.height
+        let offsetX = 0
+        let offsetY = 0
 
-        if (width >= height && width > maxWidth) {
-          // width is the largest dimension, and it's too big.
-          height *= maxWidth / width
-          width = maxWidth
-          isTooLarge = true
-        } else if (height > maxHeight) {
-          // either width wasn't over-size or height is the largest dimension
-          // and the height is over-size
-          width *= maxHeight / height
-          height = maxHeight
-          isTooLarge = true
-        }
+        if (!modifier.width) modifier.width = width
+        if (!modifier.height) modifier.height = height
 
-        if (!isTooLarge) {
-          // early exit; no need to resize
-          callback(file, false, 'tooSmall')
-          return
+        if (crop) {
+          if (width / height < modifier.width / modifier.height) {
+            // top-bottom falloff
+            drawHeight = (modifier.width / width) * height
+            offsetY = (modifier.height - drawHeight) / 2
+          } else {
+            // left-right falloff
+            drawWidth = (modifier.height / height) * width
+            offsetX = (modifier.width - drawWidth) / 2
+          }
+          width = modifier.width
+          height = modifier.height
+        } else {
+          if (width >= height && width > modifier.width) {
+            // width is the largest dimension, and it's too big.
+            height *= modifier.width / width
+            width = modifier.width
+          } else if (height > modifier.height) {
+            // either width wasn't over-size or height is the largest dimension
+            // and the height is over-size
+            width *= modifier.height / height
+            height = modifier.height
+          }
         }
 
         const canvas = document.createElement('canvas')
@@ -141,10 +149,11 @@ export default class ImageTools {
             ctx.transform(1, 0, 0, 1, 0, 0)
             break
         }
-        ctx.drawImage(image, 0, 0, width, height)
+        if (crop) ctx.drawImage(image, offsetX, offsetY, drawWidth, drawHeight)
+        else ctx.drawImage(image, 0, 0, width, height)
         ctx.restore()
 
-        const name = `${Math.round(width)}-${Math.round(height)}-${file.name}`
+        const name = `${label}/${fileName}`
 
         if (hasToBlobSupport) {
           canvas.toBlob(
@@ -153,7 +162,7 @@ export default class ImageTools {
               callback(blob, true)
             },
             file.type,
-            comp
+            quality
           )
         } else {
           let blob = ImageTools._toBlob(canvas, file.type)
@@ -162,6 +171,7 @@ export default class ImageTools {
         }
       })
     }
+
     ImageTools._loadImage(image, file)
 
     return true

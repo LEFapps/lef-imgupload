@@ -9,9 +9,10 @@ import {
 } from 'reactstrap'
 import PropTypes from 'prop-types'
 import { Slingshot } from 'meteor/edgee:slingshot'
-import { last, cloneDeep, sortBy } from 'lodash'
+import { last, cloneDeep, sortBy, isInteger } from 'lodash'
 
 import ImageTools from './tools/scale'
+import { safeName } from './tools/name'
 import './Settings'
 
 const initState = {
@@ -21,23 +22,41 @@ const initState = {
   name: '',
   uploaded: false,
   thumbnails: [],
-  thumbsUploaded: [],
+  thumbsUploaded: 0,
   started: false,
   progress: null,
   done: null,
   error: undefined
 }
 
-const generateThumbnail = (image, size, quality, callback) => {
-  ImageTools.resize(
-    image,
-    {
-      width: size, // maximum width
-      height: size // maximum height
-    },
-    quality,
-    callback
-  )
+const retina = ({ label, width, height, crop = false, quality = 0.5 }) => ({
+  label: label + '@2x',
+  width: width * 2,
+  height: height * 2,
+  quality: quality * 0.8,
+  crop
+})
+
+const generateThumbnail = (image, filename, modifier, callback) => {
+  if (typeof modifier === 'function') {
+    // original
+    callback = modifier
+    modifier = {
+      label: 'original',
+      crop: false,
+      quality: 1
+    }
+  } else if (isInteger(modifier)) {
+    // deprecated
+    modifier = {
+      label: `thumb-${modifier}`,
+      width: modifier,
+      height: modifier,
+      crop: false,
+      quality: 0.6
+    }
+  }
+  ImageTools.resize(image, filename, modifier, callback)
 }
 
 const uploader = new Slingshot.Upload('imageUpload')
@@ -47,104 +66,144 @@ class ImageUpload extends Component {
   constructor (props) {
     super(props)
     this.state = cloneDeep(initState)
-    this.onChange = this.onChange.bind(this)
+    this.progressor = false
+    this.addImage = this.addImage.bind(this)
     this.handleUpload = this.handleUpload.bind(this)
     this.uploader = props.fileUploader ? fileUploader : uploader
   }
+
   updateProgress () {
-    setInterval(() => {
-      if (this.state.started) {
-        this.setState({
-          progress: this.uploader.progress() * 100,
-          done: this.uploader.progress() >= 1
-        })
+    this.progressor = setInterval(() => {
+      const { started, thumbnails, thumbsUploaded, uploaded } = this.state
+      const progress =
+        (this.uploader.progress() / (thumbnails.length + 1) +
+          (thumbsUploaded + (uploaded ? 1 : 0)) / (thumbnails.length + 1)) *
+        100
+      // console.log(
+      //   this.uploader.progress(),
+      //   thumbnails.length + 1,
+      //   thumbsUploaded,
+      //   uploaded,
+      //   progress
+      // )
+      if (started) {
+        this.setState(
+          {
+            progress,
+            done:
+              this.uploader.progress() >= 1 &&
+              thumbsUploaded >= thumbnails.length
+          },
+          () => {
+            if (this.state.done) {
+              clearInterval(this.progressor)
+              this.setState(cloneDeep(initState))
+            }
+          }
+        )
       }
     }, 16)
   }
-  onChange (e) {
-    this.setState(cloneDeep(initState))
-    if (e.target.files[0]) {
-      const url = URL.createObjectURL(e.target.files[0])
-      this.setState({
-        localImage: url,
-        image: e.target.files[0],
-        name: e.target.files[0].name
-      })
-      if (this.props.sizes && this.props.sizes.length) {
-        this.props.sizes.forEach(size => this.addThumb(e.target.files[0], size))
-      } else this.setState({ thumbsProcessed: true })
+
+  addImage ({ target }) {
+    if (!target) {
+      this.setState(cloneDeep(initState))
+      return false
     }
-  }
-  addThumb (image, size) {
-    generateThumbnail(
-      image,
-      size,
-      this.props.quality, // 0..1 or %
-      (file, success, failure) => {
-        this.setState(prevState => {
-          const key = this.props.sizes.indexOf(size)
-          const thumbnails = prevState.thumbnails
-          thumbnails[key] = success ? file : false
-          const thumbsProcessed = thumbnails.length == this.props.sizes.length
-          return { thumbnails: thumbnails, thumbsProcessed: thumbsProcessed }
+    this.setState(cloneDeep(initState), () => {
+      const file = target.files[0]
+      if (file) {
+        const name = safeName(file.name)
+        this.setState({ name }, () => {
+          const localImage = URL.createObjectURL(target.files[0])
+          generateThumbnail(file, name, (image, success, failure) => {
+            this.setState({ localImage, image }, () => {
+              if (this.props.sizes && this.props.sizes.length) {
+                this.props.sizes.forEach(size =>
+                  this.addThumb(target.files[0], size)
+                )
+              } else this.setState({ thumbsProcessed: true })
+            })
+          })
         })
       }
-    )
+    })
   }
+
+  addThumb (image, size) {
+    const { name } = this.state
+    const callback = retinised => {
+      return (file, success, failure) => {
+        this.setState(prevState => {
+          const key =
+            this.props.sizes.map(({ label }) => label).indexOf(size.label) +
+            (retinised ? this.props.sizes.length : 0)
+          const thumbnails = prevState.thumbnails
+          thumbnails[key] = success ? file : false
+          const thumbsProcessed =
+            thumbnails.length === this.props.sizes.length * 2
+          return { thumbnails, thumbsProcessed }
+        })
+      }
+    }
+    generateThumbnail(image, name, size, callback(false))
+    generateThumbnail(image, name, retina(size), callback(true))
+  }
+
   handleUpload (e) {
     this.state.started = true
     this.updateProgress()
-
-    this.uploader.send(this.state.image, (error, url) => {
+    this.uploader.send(this.state.image, error => {
       if (error) {
-        this.setState({ error: error.message })
         console.error(error)
-      } else this.setState({ uploaded: url })
-
-      this.uploadThumb(0)
+        this.setState({ error: error.message })
+      } else {
+        this.setState({ uploaded: true }, () => {
+          this.props.onSubmit(this.state.name)
+          this.uploadThumb()
+        })
+      }
     })
   }
-  uploadThumb (index) {
-    const image = this.state.thumbnails[index]
-    const size = this.props.sizes[index]
+
+  uploadThumb () {
+    const { thumbsUploaded } = this.state
+    const image = this.state.thumbnails[thumbsUploaded]
+    let size = this.props.sizes[thumbsUploaded]
+    const callback = () =>
+      this.setState({ thumbsUploaded: thumbsUploaded + 1 }, () =>
+        this.uploadThumb()
+      )
     if (typeof image === 'undefined') this.finishUpload()
     else {
       if (image) {
-        this.uploader.send(image, (error, url) => {
+        this.uploader.send(image, error => {
+          if (!size) {
+            size = this.props.sizes[thumbsUploaded - this.props.sizes.length]
+          }
           if (error) {
-            console.error(`Thumbnail ${size} could not be uploaded`, error)
+            console.error(
+              `Thumbnail “${size.label}” could not be uploaded`,
+              error
+            )
           }
-          const thumb = {
-            size: size,
-            url: url
-          }
-          this.setState(prevState => {
-            thumbsUploaded: prevState.thumbsUploaded.push(thumb)
-          })
-          this.uploadThumb(++index)
+          callback()
         })
-      } else {
-        const thumb = {
-          size: size,
-          url: this.state.uploaded
-        }
-        this.setState(prevState => {
-          thumbsUploaded: prevState.thumbsUploaded.push(thumb)
-        })
-        this.uploadThumb(++index)
-      }
+      } else callback()
     }
   }
+
   finishUpload () {
     if (!this.state.error) {
-      const url = this.state.uploaded
-      const thumbnails = this.state.thumbsUploaded
-      if (url && thumbnails.length == this.props.sizes.length) {
-        this.setState(cloneDeep(initState))
-        this.props.onSubmit(url, sortBy(thumbnails, 'size'))
+      if (
+        this.state.name &&
+        this.state.thumbsUploaded === this.props.sizes.length * 2
+      ) {
+        this.props.onSubmit(this.state.name)
       }
     }
   }
+
   render () {
     return (
       <div id={'imgUpload'}>
@@ -154,7 +213,7 @@ class ImageUpload extends Component {
             id={this.props.id || 'imageUploadFile'}
             name={this.props.name || 'file'}
             label={this.props.placeholder || this.props.label || undefined}
-            onChange={this.onChange}
+            onChange={this.addImage}
             invalid={this.props.invalid}
           />
           <FormText color='muted' className={'localImage'}>
@@ -219,12 +278,16 @@ class MarkdownImageUpload extends Component {
 
 ImageUpload.propTypes = {
   onSubmit: PropTypes.func.isRequired,
-  sizes: PropTypes.array,
-  label: PropTypes.oneOfType([
-    PropTypes.string,
-    PropTypes.element,
-    PropTypes.object
-  ]),
+  sizes: PropTypes.arrayOf(
+    PropTypes.shape({
+      label: PropTypes.string.isRequired,
+      width: PropTypes.number.isRequired,
+      height: PropTypes.number.isRequired,
+      crop: PropTypes.bool,
+      quality: PropTypes.number
+    })
+  ),
+  label: PropTypes.oneOfType([PropTypes.string, PropTypes.object]),
   fileUploader: PropTypes.bool
 }
 
