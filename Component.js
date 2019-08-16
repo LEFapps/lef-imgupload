@@ -9,7 +9,7 @@ import {
 } from 'reactstrap'
 import PropTypes from 'prop-types'
 import { Slingshot } from 'meteor/edgee:slingshot'
-import { last, cloneDeep, sortBy, isInteger } from 'lodash'
+import { last, cloneDeep, isInteger } from 'lodash'
 
 import ImageTools from './tools/scale'
 import { safeName } from './tools/name'
@@ -59,8 +59,8 @@ const generateThumbnail = (image, filename, modifier, callback) => {
   ImageTools.resize(image, filename, modifier, callback)
 }
 
-const uploader = new Slingshot.Upload('imageUpload')
-const fileUploader = new Slingshot.Upload('fileUpload')
+const uploader = () => new Slingshot.Upload('imageUpload')
+const fileUploader = () => new Slingshot.Upload('fileUpload')
 
 class ImageUpload extends Component {
   constructor (props) {
@@ -69,40 +69,26 @@ class ImageUpload extends Component {
     this.progressor = false
     this.addImage = this.addImage.bind(this)
     this.handleUpload = this.handleUpload.bind(this)
-    this.uploader = props.fileUploader ? fileUploader : uploader
+    this.uploader = props.fileUploader ? fileUploader() : uploader()
   }
 
   updateProgress () {
     this.progressor = setInterval(() => {
       const { started, thumbnails, thumbsUploaded, uploaded } = this.state
+      const progressed =
+        ((thumbsUploaded + (uploaded ? 1 : 0)) / (thumbnails.length + 1)) * 100
       const progress =
-        (this.uploader.progress() / (thumbnails.length + 1) +
-          (thumbsUploaded + (uploaded ? 1 : 0)) / (thumbnails.length + 1)) *
-        100
-      // console.log(
-      //   this.uploader.progress(),
-      //   thumbnails.length + 1,
-      //   thumbsUploaded,
-      //   uploaded,
-      //   progress
-      // )
+        (this.uploader.progress() / (thumbnails.length + 1)) * 100 + progressed
       if (started) {
-        this.setState(
-          {
-            progress,
-            done:
-              this.uploader.progress() >= 1 &&
-              thumbsUploaded >= thumbnails.length
-          },
-          () => {
-            if (this.state.done) {
-              clearInterval(this.progressor)
-              this.setState(cloneDeep(initState))
-            }
+        const done = uploaded && thumbsUploaded >= thumbnails.length
+        this.setState({ progress, done }, () => {
+          if (this.state.done) {
+            clearInterval(this.progressor)
+            this.finishUpload()
           }
-        )
+        })
       }
-    }, 16)
+    }, 128)
   }
 
   addImage ({ target }) {
@@ -150,19 +136,14 @@ class ImageUpload extends Component {
     generateThumbnail(image, name, retina(size), callback(true))
   }
 
-  handleUpload (e) {
+  handleUpload () {
     this.state.started = true
     this.updateProgress()
     this.uploader.send(this.state.image, error => {
       if (error) {
         console.error(error)
         this.setState({ error: error.message })
-      } else {
-        this.setState({ uploaded: true }, () => {
-          this.props.onSubmit(this.state.name)
-          this.uploadThumb()
-        })
-      }
+      } else this.setState({ uploaded: true }, () => this.uploadThumb())
     })
   }
 
@@ -174,8 +155,7 @@ class ImageUpload extends Component {
       this.setState({ thumbsUploaded: thumbsUploaded + 1 }, () =>
         this.uploadThumb()
       )
-    if (typeof image === 'undefined') this.finishUpload()
-    else {
+    if (typeof image !== 'undefined') {
       if (image) {
         this.uploader.send(image, error => {
           if (!size) {
@@ -195,12 +175,8 @@ class ImageUpload extends Component {
 
   finishUpload () {
     if (!this.state.error) {
-      if (
-        this.state.name &&
-        this.state.thumbsUploaded === this.props.sizes.length * 2
-      ) {
-        this.props.onSubmit(this.state.name)
-      }
+      this.props.onSubmit(this.state.name)
+      this.setState(cloneDeep(initState))
     }
   }
 

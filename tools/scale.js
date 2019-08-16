@@ -42,7 +42,6 @@ export default class ImageTools {
     { label, quality, crop, ...modifier },
     callback
   ) {
-    // Implementation not supported
     if (!ImageTools.isSupported()) {
       console.warn('[Image Uploader] Resizing not supported')
       return callback(file, false, 'unsupported')
@@ -53,13 +52,13 @@ export default class ImageTools {
       return callback(file, false, 'unsupported')
     }
 
-    // Not attempting, could be an animated gif
     // TODO: use https://github.com/antimatter15/whammy to convert gif to webm
     if (file.type.match(/image\/gif/)) {
       console.debug('[Image Uploader] Image type gif not resizable')
       return callback(file, false, 'gif')
     }
 
+    /* Make sure quality is within limits .25 .. 1 */
     quality =
       quality > 100
         ? 0.6 // default 60 %
@@ -70,16 +69,30 @@ export default class ImageTools {
     const image = document.createElement('img')
     image.onload = imgEvt => {
       getOrientation(file, orientation => {
-        let width = image.width
-        let height = image.height
-        let drawWidth = modifier.width
-        let drawHeight = modifier.height
+        const canvas = document.createElement('canvas')
+        let drawWidth, drawHeight
         let offsetX = 0
         let offsetY = 0
+        let width = image.width
+        let height = image.height
 
-        if (!modifier.width) modifier.width = width
-        if (!modifier.height) modifier.height = height
+        /* Values */
+        if ([5, 6, 7, 8].includes(orientation)) {
+          // 90° rotated
+          const h = modifier.height || width
+          modifier.height = modifier.width || height
+          modifier.width = h
+          drawWidth = modifier.width
+          drawHeight = modifier.height
+        } else {
+          // straight
+          drawWidth = modifier.width
+          drawHeight = modifier.height
+          if (!modifier.width) modifier.width = width
+          if (!modifier.height) modifier.height = height
+        }
 
+        /* Scaling */
         if (crop) {
           if (width / height < modifier.width / modifier.height) {
             // top-bottom falloff
@@ -98,14 +111,13 @@ export default class ImageTools {
             height *= modifier.width / width
             width = modifier.width
           } else if (height > modifier.height) {
-            // either width wasn't over-size or height is the largest dimension
-            // and the height is over-size
+            // either width wasn't over-size or height is the largest dimension and the height is over-size
             width *= modifier.height / height
             height = modifier.height
           }
         }
 
-        const canvas = document.createElement('canvas')
+        /* Canvas */
         if ([5, 6, 7, 8].includes(orientation)) {
           // 90° rotated
           canvas.width = height
@@ -114,11 +126,12 @@ export default class ImageTools {
           canvas.width = width
           canvas.height = height
         }
-
-        let ctx = canvas.getContext('2d')
+        const ctx = canvas.getContext('2d')
         ctx.imageSmoothingEnabled = true
         ctx.imageSmoothingQuality = 'high'
         ctx.save()
+
+        /* Orientation */
         switch (orientation) {
           case 2:
             ctx.transform(-1, 0, 0, 1, width, 0)
@@ -149,16 +162,17 @@ export default class ImageTools {
             ctx.transform(1, 0, 0, 1, 0, 0)
             break
         }
+
+        /* Drawing */
         if (crop) ctx.drawImage(image, offsetX, offsetY, drawWidth, drawHeight)
         else ctx.drawImage(image, 0, 0, width, height)
         ctx.restore()
 
-        const name = `${label}/${fileName}`
-
+        /* Export Blob from canvas */
         if (hasToBlobSupport) {
           canvas.toBlob(
             blob => {
-              blob.name = name
+              blob.name = `${label}/${fileName}`
               callback(blob, true)
             },
             file.type,
@@ -166,15 +180,13 @@ export default class ImageTools {
           )
         } else {
           let blob = ImageTools._toBlob(canvas, file.type)
-          blob.name = name
+          blob.name = `${label}/${fileName}`
           callback(blob, true)
         }
       })
     }
 
-    ImageTools._loadImage(image, file)
-
-    return true
+    return ImageTools._loadImage(image, file)
   }
 
   static _toBlob (canvas, type) {
