@@ -9,7 +9,7 @@ import {
 } from 'reactstrap'
 import PropTypes from 'prop-types'
 import { Slingshot } from 'meteor/edgee:slingshot'
-import { last, cloneDeep, isInteger } from 'lodash'
+import { cloneDeep, isInteger } from 'lodash'
 
 import ImageTools from './tools/scale'
 import { safeName } from './tools/name'
@@ -29,13 +29,18 @@ const initState = {
   error: undefined
 }
 
-const retina = ({ label, width, height, crop = false, quality = 0.5 }) => ({
-  label: label + '@2x',
-  width: width * 2,
-  height: height * 2,
-  quality: quality * 0.8,
-  crop
-})
+const retinaSize = ({ width, height, quality = 0.6, ...size }) =>
+  Object.assign(size, {
+    width: width * 2,
+    height: height * 2,
+    quality: quality * 0.8
+  })
+
+const retinaName = name =>
+  name
+    .split('.')
+    .map((n, i, { length }) => (i === length - 2 ? n + '@2x' : n))
+    .join('.')
 
 const generateThumbnail = (image, filename, modifier, callback) => {
   if (typeof modifier === 'function') {
@@ -59,8 +64,7 @@ const generateThumbnail = (image, filename, modifier, callback) => {
   ImageTools.resize(image, filename, modifier, callback)
 }
 
-const uploader = () => new Slingshot.Upload('imageUpload')
-const fileUploader = () => new Slingshot.Upload('fileUpload')
+const uploader = key => new Slingshot.Upload(key)
 
 class ImageUpload extends Component {
   constructor (props) {
@@ -69,7 +73,7 @@ class ImageUpload extends Component {
     this.progressor = false
     this.addImage = this.addImage.bind(this)
     this.handleUpload = this.handleUpload.bind(this)
-    this.uploader = props.fileUploader ? fileUploader() : uploader()
+    this.uploader = uploader(props.uploader || 'images')
   }
 
   updateProgress () {
@@ -118,39 +122,36 @@ class ImageUpload extends Component {
 
   addThumb (image, size) {
     const { name } = this.state
-    const callback = retinised => {
-      return (file, success, failure) => {
-        this.setState(prevState => {
-          const key =
-            this.props.sizes.map(({ label }) => label).indexOf(size.label) +
-            (retinised ? this.props.sizes.length : 0)
-          const thumbnails = prevState.thumbnails
-          thumbnails[key] = success ? file : false
-          const thumbsProcessed =
-            thumbnails.length === this.props.sizes.length * 2
-          return { thumbnails, thumbsProcessed }
-        })
-      }
+    const callback = (file, success, error) => {
+      this.setState(({ thumbnails }) => {
+        success ? thumbnails.push(file) : console.error(error)
+        const thumbsProcessed =
+          thumbnails.filter(v => v).length >=
+          this.props.sizes.length +
+            this.props.sizes.filter(({ retina }) => retina).length
+        return { thumbnails, thumbsProcessed }
+      })
     }
-    generateThumbnail(image, name, size, callback(false))
-    generateThumbnail(image, name, retina(size), callback(true))
+    generateThumbnail(image, name, size, callback)
+    if (size.retina) {
+      generateThumbnail(image, retinaName(name), retinaSize(size), callback)
+    }
   }
 
   handleUpload () {
     this.state.started = true
     this.updateProgress()
-    this.uploader.send(this.state.image, error => {
+    this.uploader.send(this.state.image, (error, url) => {
       if (error) {
         console.error(error)
         this.setState({ error: error.message })
-      } else this.setState({ uploaded: true }, () => this.uploadThumb())
+      } else this.setState({ uploaded: url }, () => this.uploadThumb())
     })
   }
 
   uploadThumb () {
     const { thumbsUploaded } = this.state
     const image = this.state.thumbnails[thumbsUploaded]
-    let size = this.props.sizes[thumbsUploaded]
     const callback = () =>
       this.setState({ thumbsUploaded: thumbsUploaded + 1 }, () =>
         this.uploadThumb()
@@ -158,12 +159,9 @@ class ImageUpload extends Component {
     if (typeof image !== 'undefined') {
       if (image) {
         this.uploader.send(image, error => {
-          if (!size) {
-            size = this.props.sizes[thumbsUploaded - this.props.sizes.length]
-          }
           if (error) {
             console.error(
-              `Thumbnail “${size.label}” could not be uploaded`,
+              `Thumbnail ${image.name} could not be uploaded`,
               error
             )
           }
@@ -175,7 +173,9 @@ class ImageUpload extends Component {
 
   finishUpload () {
     if (!this.state.error) {
-      this.props.onSubmit(this.state.name)
+      this.props.onSubmit(
+        this.props._getUrl ? this.state.uploaded : this.state.name
+      )
       this.setState(cloneDeep(initState))
     }
   }
@@ -230,26 +230,10 @@ class ImageUpload extends Component {
 /*
  * Converts the uploaded url to a Markdown formatted string.
  */
-class MarkdownImageUpload extends Component {
-  constructor (props) {
-    super(props)
-    this.convertToMd = this.convertToMd.bind(this)
-  }
-  convertToMd (url, thumbs) {
-    const { sizes } = this.props
-    filename = last(url.split('/'))
-    if (sizes && thumbs) {
-      let result = false
-      while (!result && sizes.length) {
-        const size = sizes.pop()
-        result = thumbs.find(t => t.size === size)
-      }
-      if (result) this.props.onSubmit(`\n![${filename}](${result.url})`)
-    } else this.props.onSubmit(`\n![${filename}](${url})`)
-  }
-  render () {
-    return <ImageUpload {...this.props} onSubmit={this.convertToMd} />
-  }
+const MarkdownImageUpload = props => {
+  const convertToMd = url =>
+    props.onSubmit(`\n![${url.split('/').pop()}](${url})`)
+  return <ImageUpload {...props} onSubmit={convertToMd} _getUrl />
 }
 
 ImageUpload.propTypes = {
@@ -257,14 +241,18 @@ ImageUpload.propTypes = {
   sizes: PropTypes.arrayOf(
     PropTypes.shape({
       label: PropTypes.string.isRequired,
-      width: PropTypes.number.isRequired,
-      height: PropTypes.number.isRequired,
+      width: PropTypes.oneOfType([PropTypes.number, PropTypes.string])
+        .isRequired,
+      height: PropTypes.oneOfType([PropTypes.number, PropTypes.string])
+        .isRequired,
       crop: PropTypes.bool,
-      quality: PropTypes.number
+      quality: PropTypes.oneOfType([PropTypes.number, PropTypes.string])
     })
   ),
   label: PropTypes.oneOfType([PropTypes.string, PropTypes.object]),
-  fileUploader: PropTypes.bool
+  placeholder: PropTypes.string,
+  uploader: PropTypes.string,
+  _getUrl: PropTypes.bool
 }
 
 ImageUpload.defaultProps = {
