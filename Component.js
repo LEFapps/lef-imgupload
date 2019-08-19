@@ -103,15 +103,14 @@ class ImageUpload extends Component {
     this.setState(cloneDeep(initState), () => {
       const file = target.files[0]
       if (file) {
-        const name = safeName(file.name)
+        let name = safeName(file.name)
+        const source = new File([file], name, { type: file.type })
         this.setState({ name }, () => {
           const localImage = URL.createObjectURL(target.files[0])
-          generateThumbnail(file, name, (image, success, failure) => {
+          generateThumbnail(source, name, (image, success, failure) => {
             this.setState({ localImage, image }, () => {
               if (this.props.sizes && this.props.sizes.length) {
-                this.props.sizes.forEach(size =>
-                  this.addThumb(target.files[0], size)
-                )
+                this.props.sizes.forEach(size => this.addThumb(source, size))
               } else this.setState({ thumbsProcessed: true })
             })
           })
