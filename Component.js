@@ -9,7 +9,7 @@ import {
 } from 'reactstrap'
 import PropTypes from 'prop-types'
 import { Slingshot } from 'meteor/edgee:slingshot'
-import { cloneDeep, isInteger } from 'lodash'
+import { cloneDeep, isInteger, isString } from 'lodash'
 
 import ImageTools from './tools/scale'
 import { safeName } from './tools/name'
@@ -73,7 +73,9 @@ class ImageUpload extends Component {
     this.progressor = false
     this.addImage = this.addImage.bind(this)
     this.handleUpload = this.handleUpload.bind(this)
-    this.uploader = uploader(props.uploader || 'images')
+    this.uploader = isString(props.uploader)
+      ? uploader(props.uploader || 'images')
+      : props.uploader
   }
 
   updateProgress () {
@@ -250,7 +252,8 @@ ImageUpload.propTypes = {
   ),
   label: PropTypes.oneOfType([PropTypes.string, PropTypes.object]),
   placeholder: PropTypes.string,
-  uploader: PropTypes.string,
+  // uploader: PropTypes.string,
+  // uploader: PropTypes.oneOfType([PropTypes.string, PropTypes.object]),
   _getUrl: PropTypes.bool
 }
 
