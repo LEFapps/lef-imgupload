@@ -1,21 +1,37 @@
 import { Meteor } from 'meteor/meteor'
-import './Settings'
 import { Slingshot } from 'meteor/edgee:slingshot'
 
-const uploads = Meteor.settings.public.uploads
+import setRestrictions from './settings'
 
-if (uploads) {
-  uploads.forEach(({ key, defaultPrefix }) => {
-    const serverSide = Meteor.settings.uploads || []
-    const server = serverSide.find(p => p.key === key) || {}
+const uploaders = Meteor.settings.public.uploads
+const uploaderSettings = Meteor.settings.uploads
+
+Meteor.methods({
+  createDirective: uploadKey => {
+    const uploader = uploaders[uploadKey]
+    const uploaderSetting = uploaderSettings[uploadKey]
+    if (!uploader) {
+      throw new Meteor.Error('not-found', 'This uploader is not available')
+    }
+    const key = uploadKey
+    if (Slingshot.getDirective(key)) return true
+    setRestrictions(key)
     Slingshot.createDirective(key, Slingshot.S3Storage, {
-      bucket: server.S3Bucket || Meteor.settings.S3Bucket,
-      acl: 'public-read',
-      cacheControl: 'max-age=3153600',
-      region: server.S3Region || Meteor.settings.S3Region,
+      bucket: uploaderSetting.bucket || Meteor.settings.S3Bucket,
+      region: uploaderSetting.region || Meteor.settings.S3Region,
+      acl: uploader.acl || 'public-read',
+      cacheControl: uploader.cacheControl || 'max-age=3153600',
       authorize: () => true,
-      key: ({ name }) =>
-        key + '/' + (name.indexOf('/') ? name : (defaultPrefix || '') + name)
+      key: ({ name }) => {
+        const res =
+          uploadKey +
+          '/' +
+          ((name || '').indexOf('/') >= 0
+            ? name
+            : (uploader.defaultPrefix || '') + name)
+        return res
+      }
     })
-  })
-}
+    if (Slingshot.getDirective(key)) return true
+  }
+})
