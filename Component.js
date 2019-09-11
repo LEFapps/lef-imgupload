@@ -77,7 +77,7 @@ const MarkdownImageUpload = ({ sizes, picture, onSubmit, ...props }) => {
   )
 }
 
-ImageUpload.propTypes = {
+UploadComponent.propTypes = {
   onSubmit: PropTypes.func.isRequired,
   sizes: PropTypes.arrayOf(
     PropTypes.shape({
@@ -97,7 +97,7 @@ ImageUpload.propTypes = {
   _getUrl: PropTypes.bool
 }
 
-ImageUpload.defaultProps = {
+UploadComponent.defaultProps = {
   sizes: []
 }
 
