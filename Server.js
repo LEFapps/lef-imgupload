@@ -3,13 +3,13 @@ import { Slingshot } from 'meteor/edgee:slingshot'
 
 import setRestrictions from './settings'
 
-const uploaders = Meteor.settings.public.uploads
-const uploaderSettings = Meteor.settings.uploads
+const uploaders = Meteor.settings.public.uploads || {}
+const uploaderSettings = Meteor.settings.uploads || {}
 
 Meteor.methods({
   createDirective: uploadKey => {
     const uploader = uploaders[uploadKey]
-    const uploaderSetting = uploaderSettings[uploadKey]
+    const uploaderSetting = uploaderSettings[uploadKey] || {}
     if (!uploader) {
       throw new Meteor.Error('not-found', 'This uploader is not available')
     }
