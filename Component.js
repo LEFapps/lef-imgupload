@@ -14,7 +14,7 @@ class UploadComponent extends React.Component {
   componentDidMount () {
     this._isMounted = true
     this._loadUploader(
-      this.props.uploader || this.props.fileUploader ? 'files' : 'images'
+      this.props.uploader || (this.props.fileUploader ? 'files' : 'images')
     )
   }
   componentWillUnmount () {
@@ -26,6 +26,7 @@ class UploadComponent extends React.Component {
         setRestrictions(uploader)
         this.setState({ uploadHandler: new Slingshot.Upload(uploader) })
       }
+      if (e) console.error(e)
     })
   }
   onSubmit = file =>
