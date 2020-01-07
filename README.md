@@ -4,7 +4,7 @@ This package let's you upload images to Amazon AWS S3 using a simple user interf
 
 ## Usage
 
-```JSX
+``` JSX
 import ImageUpload from "meteor/lef:imgupload";
 
 const doSomeThingWithTheUrl = (url[, thumbs]) => {
@@ -21,22 +21,31 @@ Alternatively, use the `MarkdownImageUpload` to get a Markdown formatted image s
 
 Your meteor settings should contain the following:
 
-```JSON
+``` JSON
 {
   "AWSAccessKeyId": "youraccesskey",
   "AWSSecretAccessKey": "yoursecret",
   "S3Bucket": "yourbucket",
   "S3Region": "yourregion",
   "public": {
-    "imgupload": {
-      "allowedFileTypes": ["image/png", "image/jpeg", "image/gif"],
-      "maxSize": 12582912,
-      "prefix": "optional/prefix-without-trailing-slash"
-    },
-    "fileupload": {
-      "allowedFileTypes": ["application/pdf", "other file formats for your file upload"],
-      "maxSize": 12582912
-    }
+    "uploads": [
+      {
+        "key": "images", // url-safe string
+        "maxSize": 12582912, // max file size in bytes *
+        "defaultPrefix": "original/", // prefix for default resizer
+        "allowedFileTypes": [
+          "image/png",
+          "image/jpeg",
+          "image/gif"
+        ] // list of allowed MIME-types
+      }, {
+        "key": "files",
+        "maxSize": 12582912,
+        "allowedFileTypes": [
+          "application/pdf"
+        ]
+      }
+    ]
   }
 }
 ```
@@ -47,7 +56,7 @@ Your meteor settings should contain the following:
 
 You can specify an array of sizes for which a thumbnail should be created. These are uploaded together with the original file. The onSubmit handler is called once when all images are uploaded. Proposal for saving thumbnails:
 
-```JSON
+``` JSON
 {
   "url" : "<original image url>",
   "thumbnails" : {
@@ -56,19 +65,19 @@ You can specify an array of sizes for which a thumbnail should be created. These
 }
 ```
 
-```JSX
+``` JSX
 const ImageBox = picture => {
   const url =
     picture.thumbnails && picture.thumbnails["512"]
       ? picture.thumbnails["512"]
       : picture.url;
-  return <div style={{backgroundImage: `url(${url})`}} />;
+  return <div style={{backgroundImage: `url(${url})` }} />;
 }
 ```
 
 or just use the original thumbnails parameter:
 
-```JSON
+``` JSON
 {
   "url" : "<original image url>",
   "thumbnails" : [
@@ -92,8 +101,9 @@ The upload is transferred directly from the client to the AWS. This doesn't char
 
 Create a symbolic link to this package in your meteor's package folder:
 
-$ `ln -s ../../packages/lef-imgupload/ lef-imgupload`
+$ `ln -s ../../packages/lef-imgupload/ lef-imgupload` 
 
 Or use submodules:
 
-$ `git submodule add <git/url> packages`
+$ `git submodule add <git/url> packages` 
+
