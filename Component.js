@@ -59,19 +59,33 @@ class UploadComponent extends React.Component {
  * Converts the uploaded url to a Markdown formatted string.
  */
 
-const MarkdownImageUpload = ({ sizes, picture, onSubmit, ...props }) => {
+const MarkdownImageUpload = ({
+  sizes,
+  picture,
+  altTag,
+  onSubmit,
+  ...props
+}) => {
   sizes = sizes || []
   const convertToMd = ({ name, url }) => {
     const sources = [url]
     if (picture) {
-      sizes.forEach(({ label, width, height, ...size }) => {
+      sizes.forEach(({ label, width, mediaMinWidth }) => {
+        if (!mediaMinWidth) {
+          console.warn(
+            'MarkdownImageUpload: mediaMinWidth not defined for: ',
+            label
+          )
+        }
         sources.push(
-          `${url.replace('/original/', `/${label || 'original'}/`)} "${label ||
-            'fit within'} ${width || size}×${height || size}"`
+          `${url.replace(
+            '/original/',
+            `/${label || 'original'}/`
+          )} "(min-width:${mediaMinWidth}px)"`
         )
       })
     }
-    onSubmit(`\n![${name}](${sources.join(')(')})`)
+    onSubmit(`\n![${altTag || name}](${sources.join(')(')})`, url)
   }
   return (
     <UploadComponent sizes={sizes} {...props} onSubmit={convertToMd} _getMeta />
@@ -87,6 +101,7 @@ UploadComponent.propTypes = {
         .isRequired,
       height: PropTypes.oneOfType([PropTypes.number, PropTypes.string])
         .isRequired,
+      mediaMinWidth: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
       crop: PropTypes.bool,
       quality: PropTypes.oneOfType([PropTypes.number, PropTypes.string])
     })
