@@ -5,7 +5,7 @@ Package.describe({
 })
 
 Package.onUse(function (api) {
-  api.use(['ecmascript', 'edgee:slingshot'])
+  api.use(['ecmascript', 'mikkelking:slingshot'])
   Npm.depends({
     lodash: '4.17.5',
     react: '16.5.0',

@@ -8,7 +8,7 @@ import {
   Alert
 } from 'reactstrap'
 import PropTypes from 'prop-types'
-import { Slingshot } from 'meteor/edgee:slingshot'
+import { Slingshot } from 'meteor/mikkelking:slingshot'
 import { last, cloneDeep, sortBy } from 'lodash'
 
 import ImageTools from './tools/scale'

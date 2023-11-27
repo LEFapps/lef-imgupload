@@ -1,5 +1,5 @@
 import { Meteor } from 'meteor/meteor'
-import { Slingshot } from 'meteor/edgee:slingshot'
+import { Slingshot } from 'meteor/mikkelking:slingshot'
 import { get } from 'lodash'
 
 const defaultRestrictions = {
